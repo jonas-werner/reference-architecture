@@ -1,0 +1,37 @@
+hfToken:
+  secretName: "hf-token"
+
+deployment:
+  replicaCount: 1
+
+  image:
+    repository: vllm/vllm-openai
+    tag: "v0.8.3"
+
+  vllm:
+    model: "meta-llama/Llama-3.1-405B-Instruct-FP8"
+    extraArgs:
+      - "--tensor-parallel-size=8"
+
+  resources:
+    limits:
+      memory: "1920Gi"
+      nvidia.com/gpu: "8"
+    requests:
+      cpu: "110"
+      memory: "1920Gi"
+      nvidia.com/gpu: "8"
+
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 5
+  livenessProbe:
+    path: /health
+    periodSeconds: 10
+    failureThreshold: 3600
+
+modelCache:
+  enabled: true
+  create: false
+  name: huggingface-model-cache
