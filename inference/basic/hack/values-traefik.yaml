@@ -1,6 +1,6 @@
 tls:
   enabled: true
-  clusterIssuer: letsecnrypt-prod
+  clusterIssuer: letsencrypt-prod
   labels:
      cert-manager.io/cluster-issuer: letsencrypt-prod
   annotations:
