@@ -1,0 +1,39 @@
+hfToken:
+  secretName: "hf-token"
+
+deployment:
+  replicaCount: 1
+
+  image:
+    repository: vllm/vllm-openai
+    tag: "v0.8.5"
+
+  vllm:
+    model: "deepseek-ai/DeepSeek-R1"
+    extraArgs:
+      - "--tensor-parallel-size=8"
+
+  resources:
+    limits:
+      memory: "1920Gi"
+      nvidia.com/gpu: "8"
+    requests:
+      cpu: "110"
+      memory: "1920Gi"
+      nvidia.com/gpu: "8"
+
+  readinessProbe:
+    httpGet:
+      path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 5
+  livenessProbe:
+    httpGet:
+      path: /health
+    periodSeconds: 10
+    failureThreshold: 3600
+
+modelCache:
+  enabled: true
+  create: false
+  name: huggingface-model-cache
