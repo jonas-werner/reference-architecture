@@ -30,3 +30,14 @@ If release name contains chart name it will be used as a full name.
 {{- include "vllm-basic.name" . -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+The port is shared between each probe so template it into each probe definition so it doesn't need to be copied.
+*/}}
+{{- define "vllm-basic.renderProbe" -}}
+{{- $probe := .probe -}}
+{{- $port := .port -}}
+{{- $httpGet := merge $probe.httpGet (dict "port" $port) -}}
+{{- $_ := set $probe "httpGet" $httpGet -}}
+{{ toYaml $probe }}
+{{- end -}}

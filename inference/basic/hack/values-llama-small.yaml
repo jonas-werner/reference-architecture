@@ -22,11 +22,13 @@ deployment:
       nvidia.com/gpu: "1"
 
   readinessProbe:
-    path: /health
+    httpGet:
+      path: /health
     initialDelaySeconds: 10
     periodSeconds: 5
   livenessProbe:
-    path: /health
+    httpGet:
+      path: /health
     periodSeconds: 10
     failureThreshold: 3600
 

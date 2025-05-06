@@ -36,13 +36,14 @@ deployment:
     protocol: TCP
 
   readinessProbe:
-    path: /health
+    httpGet:
+      path: /health
     initialDelaySeconds: 10
     periodSeconds: 5
   livenessProbe:
-    path: /health
+    httpGet:
+      path: /health
     # This will give the container 5 minutes to start up
-    initialDelaySeconds: 300
     periodSeconds: 10
     failureThreshold: 30
   
