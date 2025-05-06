@@ -45,7 +45,7 @@ To install it, first create the `values-traefik.yaml` file:
 ```yaml
 tls:
   enabled: true
-  clusterIssuer: letsecnrypt-prod
+  clusterIssuer: letsencrypt-prod
   labels:
      cert-manager.io/cluster-issuer: letsencrypt-prod
   annotations:

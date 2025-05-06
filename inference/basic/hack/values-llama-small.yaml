@@ -6,7 +6,7 @@ deployment:
 
   image:
     repository: vllm/vllm-openai
-    tag: "v0.8.3"
+    tag: "v0.8.5"
 
   vllm:
     model: "meta-llama/Llama-3.1-8B-Instruct"

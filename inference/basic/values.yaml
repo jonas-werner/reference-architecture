@@ -14,7 +14,7 @@ deployment:
 
   image:
     repository: vllm/vllm-openai
-    tag: "v0.8.3"
+    tag: "v0.8.5"
     pullPolicy: IfNotPresent
 
   vllm:
@@ -23,11 +23,11 @@ deployment:
 
   resources:
     limits:
-      memory: 20G
+      memory: 64Gi
       nvidia.com/gpu: "1"
     requests:
-      cpu: "2"
-      memory: 6G
+      cpu: "8"
+      memory: 32Gi
       nvidia.com/gpu: "1"
   
   port:
@@ -41,7 +41,8 @@ deployment:
     periodSeconds: 5
   livenessProbe:
     path: /health
-    # This will give the container 5 minutes to start up (10 * 30 = 500 seconds) 
+    # This will give the container 5 minutes to start up
+    initialDelaySeconds: 300
     periodSeconds: 10
     failureThreshold: 30
   
