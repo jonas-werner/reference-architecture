@@ -125,7 +125,7 @@ kubectl get secret -n inference
 
 ### 5. LeaderWorkerSet (Optional)
 
-If you want to run vLLM multi-node then you need to install LeaderWorkSet into your CKS cluster.
+If you want to run vLLM multi-node then you need to install LeaderWorkerSet into your CKS cluster.
 
 Further details are in the kubernetes docs [here](https://lws.sigs.k8s.io/docs/installation/).
 
