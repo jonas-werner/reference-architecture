@@ -1,0 +1,60 @@
+{{- $app := .Values.vllm -}}
+{{- if eq $app.workload.type "leaderWorkerSet" }}
+apiVersion: leaderworkerset.x-k8s.io/v1
+kind: LeaderWorkerSet
+metadata:
+  name: {{ include "vllm-basic.fullname" . }}
+spec:
+  replicas: {{ $app.workload.leaderWorkerSet.groups }}
+  networkConfig:
+    subdomainPolicy: "UniquePerReplica"
+  leaderWorkerTemplate:
+    size: {{ $app.workload.leaderWorkerSet.groupSize }}
+    restartPolicy: "{{ $app.workload.leaderWorkerSet.restartPolicy }}"
+    leaderTemplate:
+      metadata:
+        labels:
+          role: leader
+      spec:
+        tolerations: {{ toYaml $app.tolerations | nindent 10 }}
+        affinity: {{ toYaml $app.affinity | nindent 10 }}
+        containers:
+          - name: {{ include "vllm-basic.name" . }}-leader
+            image: "{{ $app.image.repository }}:{{ $app.image.tag }}"
+            imagePullPolicy: {{ $app.image.pullPolicy }}
+            command:
+              - sh
+              - -c
+              - >
+                pip install ray[data] && bash /vllm-workspace/examples/online_serving/multi-node-serving.sh leader \
+                  --ray_cluster_size=$(LWS_GROUP_SIZE) && \
+                python3 -m vllm.entrypoints.openai.api_server \
+                  --port {{ $app.port.containerPort }} \
+                  --model {{ $app.model }}{{ range $arg := $app.extraArgs }} \
+                  {{ $arg }}{{ end }}
+            env: {{ include "vllm-basic.envVars" . | nindent 14 }}
+            resources: {{ toYaml $app.resources | nindent 14 }}
+            ports:
+              - containerPort: {{ $app.port.containerPort }}
+            readinessProbe: {{ include "vllm-basic.renderProbe" (dict "probe" $app.readinessProbe "port" $app.port.containerPort) | nindent 14 }}
+            livenessProbe: {{ include "vllm-basic.renderProbe" (dict "probe" $app.livenessProbe "port" $app.port.containerPort) | nindent 14 }}
+            volumeMounts: {{ include "vllm-basic.volumeMounts" . | nindent 14 }}
+        volumes: {{ include "vllm-basic.volumes" . | nindent 10 }}
+    workerTemplate:
+      spec:
+        tolerations: {{ toYaml $app.tolerations | nindent 10 }}
+        affinity: {{ toYaml $app.affinity | nindent 10 }}
+        containers:
+          - name: {{ include "vllm-basic.name" . }}-worker
+            image: "{{ $app.image.repository }}:{{ $app.image.tag }}"
+            imagePullPolicy: {{ $app.image.pullPolicy }}
+            command:
+              - sh
+              - -c
+              - |
+                pip install ray[data] && bash /vllm-workspace/examples/online_serving/multi-node-serving.sh worker --ray_address=$(LWS_LEADER_ADDRESS)
+            env: {{ include "vllm-basic.envVars" . | nindent 14 }}
+            resources: {{ toYaml $app.resources | nindent 14 }}
+            volumeMounts: {{ include "vllm-basic.volumeMounts" . | nindent 14 }}
+        volumes: {{ include "vllm-basic.volumes" . | nindent 10 }}
+{{- end }}

@@ -1,17 +1,18 @@
 hfToken:
   secretName: "hf-token"
 
-deployment:
-  replicaCount: 1
+vllm:
+  workload:
+    deployment:
+      replicaCount: 1
 
   image:
     repository: vllm/vllm-openai
     tag: "v0.8.5"
 
-  vllm:
-    model: "deepseek-ai/DeepSeek-R1"
-    extraArgs:
-      - "--tensor-parallel-size=8"
+  model: "deepseek-ai/DeepSeek-R1"
+  extraArgs:
+    - "--tensor-parallel-size=8"
 
   resources:
     limits:
@@ -37,3 +38,8 @@ modelCache:
   enabled: true
   create: false
   name: huggingface-model-cache
+
+ingress:
+  enabled: true
+  clusterName: "inference" 
+  orgID: "cw0000"

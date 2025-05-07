@@ -123,6 +123,12 @@ kubectl get pvc -n inference
 kubectl get secret -n inference
 ```
 
+### 5. LeaderWorkerSet (Optional)
+
+If you want to run vLLM multi-node then you need to install LeaderWorkSet into your CKS cluster.
+
+Further details are in the kubernetes docs [here](https://lws.sigs.k8s.io/docs/installation/).
+
 ## Installing the Basic Inference Chart
 
 Once the prerequisites are set up, you can install this chart. Take a look at the `values.yaml` file to see all that you can adjust. 
@@ -131,7 +137,7 @@ Once the prerequisites are set up, you can install this chart. Take a look at th
 
 There are example values files in the `hack/` folder that you can use.
 
-These examples expect that everything in the prereq steps are already installed.
+These examples expect that everything in the prereq steps are already installed. Also, before you can apply the example values files you need to update `ingress.clusterName` and `ingress.orgID` with the info for the CKS cluster you are using.
 
 For example, to run `meta-llama/Llama-3.1-8B-Instruct` you can use `hack/values-llama-small.yaml`:
 
@@ -258,5 +264,6 @@ kubectl delete secret hf-token
 - [ ] Routing to different models
 - [ ] Object storage
 - [ ] Tensorizer
-- [ ] Multi-node
+- [X] Multi-node
 - [ ] Auth
+- [ ] Remove ray[data] pip install from command when vLLM container has it built in
