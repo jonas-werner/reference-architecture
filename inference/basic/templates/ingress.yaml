@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: {{ include "vllm-basic.service.hostname" . }}.{{ .Values.ingress.clusterName }}-{{ .Values.ingress.orgID }}.coreweave.app
+    - host: &host {{ include "vllm-basic.name" . }}.{{ .Values.ingress.orgID }}-{{ .Values.ingress.clusterName }}.coreweave.app
       http:
         paths:
           - path: /
@@ -20,6 +20,6 @@ spec:
                   number: {{ .Values.service.port.port }}
   tls:
     - hosts:
-        - {{ include "vllm-basic.name" . }}.{{ .Values.ingress.clusterName }}-{{ .Values.ingress.orgID }}.coreweave.app
+        - *host
       secretName: {{ include "vllm-basic.fullname" . }}-tls
 {{- end }}

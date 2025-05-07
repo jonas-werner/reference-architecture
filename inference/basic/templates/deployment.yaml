@@ -1,11 +1,12 @@
+{{- $app := .Values.vllm -}}
+{{- if eq $app.workload.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "vllm-basic.fullname" . }}
 spec:
-  replicas: {{ .Values.deployment.replicaCount }}
-  strategy:
-    {{ toYaml .Values.deployment.rollouts.strategy | nindent 4 }}
+  replicas: {{ $app.workload.deployment.replicaCount }}
+  strategy: {{ toYaml $app.workload.deployment.rollouts.strategy | nindent 4 }}
   selector:
     matchLabels:
       app: {{ include "vllm-basic.name" . }}
@@ -14,52 +15,26 @@ spec:
       labels:
         app: {{ include "vllm-basic.name" . }}
     spec:
-      tolerations: {{ toYaml .Values.deployment.tolerations | nindent 8 }}
-      affinity: {{ toYaml .Values.deployment.affinity | nindent 8 }}
+      tolerations: {{ toYaml $app.tolerations | nindent 8 }}
+      affinity: {{ toYaml $app.affinity | nindent 8 }}
       containers:
-        - name: vllm
-          image: "{{ .Values.deployment.image.repository }}:{{ .Values.deployment.image.tag }}"
-          imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
+        - name: {{ include "vllm-basic.name" . }}
+          image: "{{ $app.image.repository }}:{{ $app.image.tag }}"
+          imagePullPolicy: {{ $app.image.pullPolicy }}
           args:
             - "--model"
-            - "{{ .Values.deployment.vllm.model }}"
-            {{- range .Values.deployment.vllm.extraArgs }}
-            - "{{ . }}"
+            - "{{ $app.model }}"
+            {{- range $arg := $app.extraArgs }}
+            - "{{ $arg }}"
             {{- end }}
           ports:
-            - name: {{ .Values.deployment.port.name }}
-              containerPort: {{ .Values.deployment.port.containerPort }}
-              protocol: {{ .Values.deployment.port.protocol }}
-          readinessProbe: {{ include "vllm-basic.renderProbe" (dict "probe" .Values.deployment.readinessProbe "port" .Values.deployment.port.containerPort) | nindent 12 }}
-          livenessProbe: {{ include "vllm-basic.renderProbe" (dict "probe" .Values.deployment.livenessProbe "port" .Values.deployment.port.containerPort) | nindent 12 }}
-          resources: {{ toYaml .Values.deployment.resources | nindent 12 }}
-          env:
-            - name: NCCL_SOCKET_IFNAME
-              value: "eth0"
-            {{- if .Values.hfToken.secretName }}
-            - name: HUGGING_FACE_HUB_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.hfToken.secretName | quote }}
-                  key: token
-            {{- else if .Values.hfToken.token }}
-            - name: HUGGING_FACE_HUB_TOKEN
-              value: {{ .Values.hfToken.token | quote }}
-            {{- end }}
-          volumeMounts:
-            - name: dshm
-              mountPath: /dev/shm
-            {{- if .Values.modelCache.enabled }}
-            - name: model-cache
-              mountPath: {{ .Values.modelCache.mountPath }}
-            {{- end }}
-      volumes:
-        # vLLM needs to access the host's shared memory for tensor parallel inference.
-        - name: dshm
-          emptyDir:
-            medium: Memory
-        {{- if .Values.modelCache.enabled }}
-        - name: model-cache
-          persistentVolumeClaim:
-            claimName: {{ .Values.modelCache.name | quote }}
-        {{- end }}
+            - name: {{ $app.port.name }}
+              containerPort: {{ $app.port.containerPort }}
+              protocol: {{ $app.port.protocol }}
+          readinessProbe: {{ include "vllm-basic.renderProbe" (dict "probe" $app.readinessProbe "port" $app.port.containerPort) | nindent 12 }}
+          livenessProbe: {{ include "vllm-basic.renderProbe" (dict "probe" $app.livenessProbe "port" $app.port.containerPort) | nindent 12 }}
+          resources: {{ toYaml $app.resources | nindent 12 }}
+          env: {{ include "vllm-basic.envVars" . | nindent 12 }}
+          volumeMounts: {{ include "vllm-basic.volumeMounts" . | nindent 12 }}
+      volumes: {{ include "vllm-basic.volumes" . | nindent 10 }}
+{{- end }}

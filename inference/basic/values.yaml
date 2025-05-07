@@ -1,25 +1,15 @@
 nameOverride: ""
 fullnameOverride: ""
 
-deployment:
-  replicaCount: 1
-
-  # The following is the default strategy for a deployment in k8s, but can be changed as needed.
-  rollouts:
-    strategy:
-      type: RollingUpdate
-      rollingUpdate:
-        maxSurge: 25%
-        maxUnavailable: 25%
-
+vllm:
+  # ──────────────── container-level defaults ────────────────
   image:
     repository: vllm/vllm-openai
     tag: "v0.8.5"
     pullPolicy: IfNotPresent
 
-  vllm:
-    model: "mistralai/Mistral-7B-Instruct-v0.3"
-    extraArgs: []
+  model: "mistralai/Mistral-7B-Instruct-v0.3"
+  extraArgs: []
 
   resources:
     limits:
@@ -29,7 +19,7 @@ deployment:
       cpu: "8"
       memory: 32Gi
       nvidia.com/gpu: "1"
-  
+
   port:
     name: http
     containerPort: 8000
@@ -46,9 +36,27 @@ deployment:
     # This will give the container 5 minutes to start up
     periodSeconds: 10
     failureThreshold: 30
-  
+
   tolerations: []
   affinity: {}
+
+  # ──────────────── workload selection & settings ────────────────
+  workload:
+    type: deployment         # "deployment" or "leaderWorkerSet"
+
+    deployment:
+      replicaCount: 1
+      rollouts:
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxSurge: 25%
+            maxUnavailable: 25%
+
+    leaderWorkerSet:
+      groups: 1
+      groupSize: 2
+      restartPolicy: RecreateGroupOnPodRestart
 
 pdb:
   enabled: true

@@ -13,8 +13,13 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port.port }}
-      targetPort: {{ .Values.deployment.port.containerPort }}
+      targetPort: {{ .Values.vllm.port.containerPort }}
       protocol: {{ .Values.service.port.protocol }}
       name: {{ .Values.service.port.name }}
   selector:
+    {{- if eq .Values.vllm.workload.type "deployment" }}
     app: {{ include "vllm-basic.name" . }}
+    {{- else if eq .Values.vllm.workload.type "leaderWorkerSet" }}
+    role: leader
+    leaderworkerset.sigs.k8s.io/name: {{ include "vllm-basic.fullname" . }}
+    {{- end }}

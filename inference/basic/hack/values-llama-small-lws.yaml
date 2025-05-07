@@ -3,25 +3,26 @@ hfToken:
 
 vllm:
   workload:
-    deployment:
-      replicaCount: 1
+    type: "leaderWorkerSet"
+    leaderWorkerSet:
+      groups: 2
+      groupSize: 2
 
   image:
     repository: vllm/vllm-openai
     tag: "v0.8.5"
 
-  model: "meta-llama/Llama-3.1-405B-Instruct-FP8"
+  model: "meta-llama/Llama-3.1-8B-Instruct"
   extraArgs:
-    - "--tensor-parallel-size=8"
+    - "--pipeline-parallel-size=2"
 
   resources:
     limits:
-      memory: "1920Gi"
-      nvidia.com/gpu: "8"
+      memory: "200Gi"
+      nvidia.com/gpu: "1"
     requests:
-      cpu: "110"
-      memory: "1920Gi"
-      nvidia.com/gpu: "8"
+      cpu: "10"
+      memory: "200Gi"
 
   readinessProbe:
     httpGet:
