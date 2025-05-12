@@ -19,7 +19,7 @@ import torch
 import torch.distributed as dist
 
 # -----------------------------------------------------------------------------
-# Logging - emit INFO only on rank 0 to avoid duplicatio
+# Logging - emit INFO only on rank 0 to avoid duplication
 # -----------------------------------------------------------------------------
 
 logging.basicConfig(level=logging.INFO)
