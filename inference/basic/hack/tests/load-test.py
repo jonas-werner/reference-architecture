@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-vllm_load_test.py – Load‑test a vLLM (OpenAI‑compatible) endpoint.
+vllm_load_test.py - Load-test a vLLM (OpenAI-compatible) endpoint.
 
 Features
 ========
-* **Variable concurrency phases** – keep the requested number of in‑flight requests topped‑up until each phase completes.
-* **Prompt file support** – supply `--prompts-file` with one prompt per line; a random one is chosen per request for realistic load‑mix.  Falls back to a single `--prompt` string.
-* **Collects** success/fail counts, median/p95 latency, requests‑per‑second, and tokens‑per‑second.
+* **Variable concurrency phases** - keep the requested number of in-flight requests topped-up until each phase completes.
+* **Prompt file support** - supply `--prompts-file` with one prompt per line; a random one is chosen per request for realistic load-mix.  Falls back to a single `--prompt` string.
+* **Collects** success/fail counts, median/p95 latency, requests-per-second, and tokens-per-second.
 * **Exports** results to JSON when `--out` is given.
 
 Example
