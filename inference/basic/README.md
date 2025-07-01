@@ -11,54 +11,44 @@ Before installing this chart, ensure you have the following:
 ## Setup
 
 ### 0. Add CoreWeave's Helm Repository
-Add CoreWeave's Helm repository to your local Helm client:
+Add CoreWeave's Helm repository to your local Helm client if you haven't already:
 
 ```bash
 helm repo add coreweave https://charts.core-services.ingress.coreweave.com
 helm repo update
 ```
 
-### 1. Ingress with Traefik
+### 1. Set up Observability and Ingress
+Follow the steps in the [Observability Setup](../../observability/basic/README.md) to install Prometheus and Grafana, which are required for monitoring and visualization of metrics.
 
-Usage of an ingress controller is recommended with this chart. The rest of this example will use CoreWeave's Traefik chart. Find more details about it [here](https://docs.coreweave.com/docs/products/cks/how-to/coreweave-charts/traefik).
+### 2. Create a ConfigMap with a Grafana Dashboard for vLLM
+You can create a ConfigMap with a Grafana dashboard for vLLM. This will allow you to visualize the metrics collected by Prometheus. You can find the dashboard JSON in [hack/manifests-grafana.yaml](./hack/manifests-grafana.yaml). This dashboard is created and published by the vLLM team ([docs here](https://docs.vllm.ai/en/v0.7.2/getting_started/examples/prometheus_grafana.html)) and is available in the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples/online_serving/prometheus_grafana).
 
-If you don't require TLS you can install the chart without any custom values with the following command. If you do, skip to section 1.a
+You can create the namespace now if it doesn't exist yet with `kubectl create namespace inference`.
 
-```bash
-helm install traefik coreweave/traefik --namespace traefik --create-namespace
-```
-
-#### 1.a TLS Support with cert-manager
-
-Cert-Manager is a simple way to manage TLS certificates. Like Traefik, CoreWeave publishes an easy to use chart. You can find the docs on it [here](https://docs.coreweave.com/docs/products/cks/how-to/coreweave-charts/cert-manager).
-
-You can customize the cert-issuers that traefik will use if you wish, but otherwise you can use the defaults and install with the following command:
+Then apply the configmap with the following command:
 
 ```bash
-helm install cert-manager coreweave/cert-manager --set cert-issuers.enabled=true --namespace cert-manager --create-namespace
+kubectl apply -f hack/manifests-grafana.yaml -n inference
 ```
 
-Once cert-manager is installed, you can install traefik with values configured to use the cert issuers.
+This will create a `grafana-dashboard` configmap in the `inference` namespace (default name for the `RELEASE_NAMESPACE`). Grafana will automatically load this dashboard. 
 
-To install it, first create the `values-traefik.yaml` file:
+### 3. Autoscaling
+You can enable horizontal pod autoscaling for the vLLM deployment, but you will need to install [keda](https://keda.sh/docs/latest/) to do so. KEDA is a Kubernetes-based event-driven autoscaler.
 
-```yaml
-tls:
-  enabled: true
-  clusterIssuer: letsencrypt-prod
-  labels:
-     cert-manager.io/cluster-issuer: letsencrypt-prod
-  annotations:
-     cert-manager.io/cluster-issuer: letsencrypt-prod
-```
-
-Then install it using the following commands:
+First add the KEDA helm repository:
 
 ```bash
-helm install traefik coreweave/traefik --namespace traefik --create-namespace -f values-traefik.yaml
+helm repo add kedacore https://kedacore.github.io/charts  
+helm repo update
+```
+Then install KEDA with the following command:
+```bash
+helm install keda kedacore/keda --namespace keda --create-namespace
 ```
 
-### 2. Huggingface tokens
+### 4. Huggingface tokens
 
 Some models on huggingface require you do be authed into an account that has been granted access. You can easily do this by using a huggingface token.
 
@@ -78,7 +68,7 @@ hfToken:
   secretName: "hf-token"
 ```
 
-### 3. Model Cache PVC
+### 5. Model Cache PVC
 
 Similar to the HuggingFace token, the chart has functionality to create a PVC for you but it is recommended you create one outside the scope of the helm chart so it can persist across deployments and be reused.
 
@@ -99,8 +89,9 @@ spec:
   storageClassName: shared-vast
 ```
 
+You can use the one in the `hack/` folder if you don't plan to make any changes.
 ```bash
-kubectl apply -f huggingface-model-cache.yaml
+kubectl apply -f hack/huggingface-model-cache.yaml
 ```
 
 Once applied, you can configure the model cache section of the chart values like this:
@@ -112,18 +103,18 @@ modelCache:
   name: huggingface-model-cache
 ```
 
-### 4. Verify Dependencies
+### 6. Verify Dependencies
 
 Ensure that all of the dependencies exist with the following commands
 
 ```bash
-kubectl get pods -n traefik
-kubectl get pods -n cert-manager
+kubectl get pods -n monitoring
+kubectl get pods -n keda
 kubectl get pvc -n inference
 kubectl get secret -n inference
 ```
 
-### 5. LeaderWorkerSet (Optional)
+### 7. LeaderWorkerSet (Optional)
 
 If you want to run vLLM multi-node then you need to install LeaderWorkerSet into your CKS cluster.
 
@@ -139,25 +130,27 @@ There are example values files in the `hack/` folder that you can use.
 
 These examples expect that everything in the prereq steps are already installed. Also, before you can apply the example values files you need to update `ingress.clusterName` and `ingress.orgID` with the info for the CKS cluster you are using.
 
+Please note that if you updated any of the default values for the observability chart installation, you may need to update the `prometheus.serverURL` value from the default `http://prometheus-operated.monitoring:9090` to the correct URL for your Prometheus instance.
+
 For example, to run `meta-llama/Llama-3.1-8B-Instruct` you can use `hack/values-llama-small.yaml`:
 
 ```bash
 helm install basic-inference ./ --namespace inference --create-namespace -f hack/values-llama-small.yaml
 ```
 
+By default, the chart will create an ingress for the vLLM service which uses the release name as subdomain.
+
 ## Using the Service
 
 Once the helm chart is deployed, you can query the endpoint using the standard OpenAI API spec.
 
-If you followed the installation steps above and created a Traefik ingress, you can retrieve the endpoint via kubectl by looking at the `ingress`. In the following example, the endpoint to query would be `navs-vllm.cw2025-training.coreweave.app`.
+If you followed the installation steps above and created a Traefik ingress, you can retrieve the endpoint via kubectl by looking at the `ingress`. In the following example, the endpoint to query would be `basic-inference.cw2025-training.coreweave.app`.
 
-If you installed and used cert-manager as the instructions recommend, you can use `https`.
+If you followed the instructions, you can use `https` because cert-manager was installed in your cluster.
 
 ```bash
-❯ kubectl get ingress                                                                                                                                                         
-NAME       CLASS     HOSTS                                     ADDRESS         PORTS     AGE
-deepseek   traefik   `navs-vllm.cw2025-training.coreweave.app`   166.19.16.127   80, 443   7d14h
-❯ export VLLM_ENDPOINT="https://navs-vllm.cw2025-training.coreweave.app"
+export VLLM_ENDPOINT="$(kubectl get ingress basic-inference -n inference -o=jsonpath='{.spec.rules[0].host}')"
+echo $VLLM_ENDPOINT
 ```
 
 ### cURL
@@ -167,22 +160,22 @@ Assuming the ingress endpoint is stored in an environment variable named `VLLM_E
 First, check that the service is healthy. If this returns a `200` the service is healthy
 
 ```bash
-❯ curl -s -o /dev/null -w "%{http_code}" $VLLM_ENDPOINT/health
-200
+curl -s -o /dev/null -w "%{http_code}" $VLLM_ENDPOINT/health
+# Response should be `200`
 ```
 
 Then you can get the current active models:
 
 ```bash
-❯ curl -s $VLLM_ENDPOINT/v1/models | jq '.data[].id'
-"deepseek-ai/DeepSeek-R1"
-❯ export VLLM_MODEL="deepseek-ai/DeepSeek-R1"
+export VLLM_MODEL="$(curl -s $VLLM_ENDPOINT/v1/models | jq -r '.data[].id')"
+echo $VLLM_MODEL
+# meta-llama/Llama-3.1-8B-Instruct
 ```
 
 Finally you can run inference against the model:
 
 ```bash
-❯ curl -X POST "$VLLM_ENDPOINT/v1/chat/completions" \
+curl -X POST "$VLLM_ENDPOINT/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
         "model": "'"$VLLM_MODEL"'",
@@ -240,14 +233,38 @@ for chunk in stream:
         print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
+### Access Metrics in Grafana
+Open the Grafana instance you set up in the Observability Setup section. You can access it via the Ingress URL you configured.
+You can find the Grafana URL by running:
+```bash
+kubectl get ingress observability-grafana -n monitoring -o=jsonpath='{.spec.rules[0].host}' ; echo
+```
+
+Now you can go to the dashboards and select the vLLM dashboard. Dashboard might take a while to be loaded from k8s configmaps. If you don't see yours, please wait a few minutes and refresh the page.
+
+### Autoscaling Test
+The sample deployment is configured to use KEDA for autoscaling. You can test this by running the following command (replace model with your model if you didn't use the small-sample `meta-llama/Llama-3.1-8B-Instruct`):
+```bash
+cd hack/tests
+python load-test.py \
+  --endpoint "https://$VLLM_ENDPOINT/v1" \
+  --model "$VLLM_MODEL" \
+  --prompts-file prompts.txt \
+  --concurrency 256 \
+  --requests 1024 \
+  --out results.json
+```
+
+The autoscaler will scale the number of replicas based on the KV Cache usage of the deployments. If you monitor your cache utilization metric in the Grafana dashboard (see previous section), you should see the number of replicas increase and decrease based on the load. The load will spread among the replicas.
+
 ## Cleanup
 
 To uninstall the chart and its dependencies, run:
 
 ```bash
 helm uninstall basic-inference --namespace inference
-helm uninstall cert-manager --namespace cert-manager
-helm uninstall traefik --namespace traefik
+helm uninstall observability --namespace monitoring
+helm uninstall keda --namespace keda
 ```
 
 If you manually installed your huggingface token and model cache, clean those up as well:
@@ -259,11 +276,12 @@ kubectl delete secret hf-token
 
 # ToDo
 
-- [ ] Autoscaling
-- [ ] vLLM Metrics
+- [X] Autoscaling
+- [X] vLLM Metrics
 - [ ] Routing to different models
 - [ ] Object storage
 - [ ] Tensorizer
 - [X] Multi-node
+- [ ] Autoscaling multi-node
 - [ ] Auth
 - [ ] Remove ray[data] pip install from command when vLLM container has it built in

@@ -43,9 +43,15 @@ vllm:
   # ──────────────── workload selection & settings ────────────────
   workload:
     type: deployment         # "deployment" or "leaderWorkerSet"
-
     deployment:
       replicaCount: 1
+      autoScale:
+        enabled: true
+        minReplicas: 1
+        maxReplicas: 10
+        pollingInterval: 15
+        cooldownPeriod: 60
+        cacheUtilizationThreshold: 40
       rollouts:
         strategy:
           type: RollingUpdate
@@ -87,5 +93,9 @@ hfToken:
 
 ingress:
   enabled: true          # toggle ingress on/off
-  clusterName: ""        # e.g. "cw0000"
-  orgID: ""              # e.g. "training"
+  clusterName: ""        # e.g. "training"
+  orgID: ""              # e.g. "cw0000"
+
+prometheus:
+  enabled: true
+  serverURL: "http://prometheus-operated.monitoring:9090"
