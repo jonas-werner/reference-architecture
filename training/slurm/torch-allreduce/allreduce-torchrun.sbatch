@@ -40,7 +40,7 @@ export PMIX_MCA_gds='^ds12'
 #   srun --container-save /mnt/vast/images/torch-extras.sqsh \
 #        --container-image=ghcr.io#coreweave/ml-containers/torch-extras:es-torch-v2.7.0-106e5d6-base-cuda12.8.1-ubuntu22.04-torch2.7.0-vision0.22.0-audio2.7.0-abi1 hostname
 #   export CONTAINER_IMAGE=/mnt/vast/images/torch-extras.sqsh
-CONTAINER_IMAGE="${CONTAINER_IMAGE:-ghcr.io#coreweave/ml-containers/torch-extras:es-torch-v2.7.0-106e5d6-base-cuda12.8.1-ubuntu22.04-torch2.7.0-vision0.22.0-audio2.7.0-abi1}"
+CONTAINER_IMAGE="${CONTAINER_IMAGE:-ghcr.io#coreweave/ml-containers/torch-extras:es-cuda-12.9.1-74755e9-nccl-cuda12.9.1-ubuntu22.04-nccl2.27.5-1-torch2.7.1-vision0.22.1-audio2.7.1-abi1}"
 
 # -----------------------------------------------------------------------------
 # Derive the variables that PyTorch's NCCL backend expects from Slurm's runtime.
