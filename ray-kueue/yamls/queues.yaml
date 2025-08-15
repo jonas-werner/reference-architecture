@@ -1,0 +1,31 @@
+---
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ClusterQueue
+metadata:
+  name: "cluster-queue"
+spec:
+  preemption:
+    withinClusterQueue: LowerPriority
+  namespaceSelector: {} # Match all namespaces.
+  resourceGroups:
+    - coveredResources: ["cpu", "memory", "nvidia.com/gpu", "rdma/ib"]
+      flavors:
+        - name: "general"
+          resources:
+            - name: "cpu"
+              nominalQuota: 254
+            - name: "memory"
+              nominalQuota: 2110335488Ki
+            - name: "nvidia.com/gpu"
+              nominalQuota: 16
+	    - name: "rdma/ib"
+	      nominalQuota: 12600
+---
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: LocalQueue
+metadata:
+  namespace: "default"
+  name: "local-dev-queue"
+spec:
+  clusterQueue: "cluster-queue"
+---

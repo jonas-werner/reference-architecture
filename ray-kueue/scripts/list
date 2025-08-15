@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""
+Script to list all Ray clusters and their resource usage.
+Shows GPUs, nodes (GPUs/8), CPUs, memory, and who submitted each cluster.
+"""
+
+import subprocess
+import json
+import sys
+from datetime import datetime
+
+
+def run_kubectl_command(cmd):
+    """Run a kubectl command and return the JSON output."""
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return json.loads(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running command {' '.join(cmd)}: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON output: {e}")
+        return None
+
+
+def get_resource_value(resources, resource_name):
+    """Extract resource value from resources dict."""
+    if not resources:
+        return 0
+    
+    limits = resources.get('limits', {})
+    requests = resources.get('requests', {})
+    
+    # Try limits first, then requests
+    value = limits.get(resource_name) or requests.get(resource_name)
+    
+    if not value:
+        return 0
+    
+    # Handle different units
+    if resource_name == 'memory':
+        if isinstance(value, str):
+            if value.endswith('Ki'):
+                return int(value[:-2]) * 1024  # Convert Ki to bytes
+            elif value.endswith('Mi'):
+                return int(value[:-2]) * 1024 * 1024  # Convert Mi to bytes
+            elif value.endswith('Gi'):
+                return int(value[:-2]) * 1024 * 1024 * 1024  # Convert Gi to bytes
+            elif value.endswith('G'):
+                return int(value[:-1]) * 1000 * 1000 * 1000  # Convert G to bytes
+        return int(value) if str(value).isdigit() else 0
+    
+    elif resource_name == 'cpu':
+        if isinstance(value, str):
+            if value.endswith('m'):
+                return int(value[:-1]) / 1000  # Convert millicores to cores
+        return float(value) if value else 0
+    
+    elif resource_name == 'nvidia.com/gpu':
+        return int(value) if value else 0
+    
+    return 0
+
+
+def format_memory(bytes_value):
+    """Format memory in human readable units."""
+    if bytes_value >= 1024**4:
+        return f"{bytes_value / (1024**4):.1f}Ti"
+    elif bytes_value >= 1024**3:
+        return f"{bytes_value / (1024**3):.1f}Gi"
+    elif bytes_value >= 1024**2:
+        return f"{bytes_value / (1024**2):.1f}Mi"
+    elif bytes_value >= 1024:
+        return f"{bytes_value / 1024:.1f}Ki"
+    else:
+        return f"{bytes_value}B"
+
+
+def get_ray_clusters():
+    """Get all Ray clusters in the cluster."""
+    cmd = ['kubectl', 'get', 'raycluster', '-o', 'json', '--all-namespaces']
+    return run_kubectl_command(cmd)
+
+
+def analyze_ray_cluster(cluster):
+    """Analyze a single Ray cluster and extract resource information."""
+    name = cluster['metadata']['name']
+    namespace = cluster['metadata']['namespace']
+    creation_time = cluster['metadata']['creationTimestamp']
+    
+    # Get cluster status
+    status = cluster.get('status', {})
+    state = status.get('state', 'Unknown')
+    
+    # Get owner/creator info
+    owner = "unknown"
+    annotations = cluster['metadata'].get('annotations', {})
+    labels = cluster['metadata'].get('labels', {})
+    
+    # Try to find who created it from various sources
+    if 'username' in annotations:
+        owner = annotations['username']
+    elif 'kubectl.kubernetes.io/last-applied-by' in annotations:
+        owner = annotations['kubectl.kubernetes.io/last-applied-by']
+    elif 'created-by' in labels:
+        owner = labels['created-by']
+    elif 'user' in labels:
+        owner = labels['user']
+    
+    total_gpus = 0
+    total_cpus = 0
+    total_memory = 0
+    
+    spec = cluster.get('spec', {})
+    
+    # Analyze head group
+    head_group = spec.get('headGroupSpec', {})
+    if head_group:
+        head_template = head_group.get('template', {}).get('spec', {})
+        head_containers = head_template.get('containers', [])
+        
+        for container in head_containers:
+            resources = container.get('resources', {})
+            total_gpus += get_resource_value(resources, 'nvidia.com/gpu')
+            total_cpus += get_resource_value(resources, 'cpu')
+            total_memory += get_resource_value(resources, 'memory')
+    
+    # Analyze worker groups
+    worker_groups = spec.get('workerGroupSpecs', [])
+    for worker_group in worker_groups:
+        replicas = worker_group.get('replicas', 0)
+        worker_template = worker_group.get('template', {}).get('spec', {})
+        worker_containers = worker_template.get('containers', [])
+        
+        for container in worker_containers:
+            resources = container.get('resources', {})
+            worker_gpus = get_resource_value(resources, 'nvidia.com/gpu')
+            worker_cpus = get_resource_value(resources, 'cpu')
+            worker_memory = get_resource_value(resources, 'memory')
+            
+            total_gpus += worker_gpus * replicas
+            total_cpus += worker_cpus * replicas
+            total_memory += worker_memory * replicas
+    
+    # Calculate nodes (GPUs / 8)
+    nodes = total_gpus / 8 if total_gpus > 0 else 0
+    
+    return {
+        'name': name,
+        'namespace': namespace,
+        'owner': owner,
+        'status': state,
+        'created': creation_time,
+        'gpus': total_gpus,
+        'nodes': nodes,
+        'cpus': total_cpus,
+        'memory': total_memory
+    }
+
+
+def main():
+    print("Ray Cluster Resource Usage Report")
+    print("=" * 80)
+    print()
+    
+    # Get all Ray clusters
+    clusters_data = get_ray_clusters()
+    if not clusters_data:
+        print("No Ray clusters found or error retrieving clusters.")
+        return
+    
+    clusters = clusters_data.get('items', [])
+    if not clusters:
+        print("No Ray clusters found in the cluster.")
+        return
+    
+    # Analyze each cluster
+    cluster_info = []
+    for cluster in clusters:
+        info = analyze_ray_cluster(cluster)
+        cluster_info.append(info)
+    
+    # Sort by creation time (newest first)
+    cluster_info.sort(key=lambda x: x['created'], reverse=True)
+    
+    # Print header
+    print(f"{'Name':<20} {'Namespace':<12} {'Owner':<15} {'Status':<10} {'GPUs':<6} {'Nodes':<7} {'CPUs':<8} {'Memory':<12} {'Created':<20}")
+    print("-" * 120)
+    
+    # Print each cluster
+    total_gpus = 0
+    total_nodes = 0
+    total_cpus = 0
+    total_memory = 0
+    
+    for info in cluster_info:
+        created_time = datetime.fromisoformat(info['created'].replace('Z', '+00:00'))
+        created_str = created_time.strftime('%Y-%m-%d %H:%M')
+        
+        memory_str = format_memory(info['memory'])
+        
+        print(f"{info['name']:<20} {info['namespace']:<12} {info['owner']:<15} "
+              f"{info['status']:<10} {info['gpus']:<6} {info['nodes']:<7.1f} {info['cpus']:<8.1f} "
+              f"{memory_str:<12} {created_str:<20}")
+        
+        total_gpus += info['gpus']
+        total_nodes += info['nodes']
+        total_cpus += info['cpus']
+        total_memory += info['memory']
+    
+    # Print totals
+    print("-" * 120)
+    total_memory_str = format_memory(total_memory)
+    print(f"{'TOTAL':<20} {'':<12} {'':<15} {'':<10} "
+          f"{total_gpus:<6} {total_nodes:<7.1f} {total_cpus:<8.1f} "
+          f"{total_memory_str:<12}")
+    
+    print()
+    print(f"Total Ray clusters: {len(cluster_info)}")
+    ready_clusters = sum(1 for info in cluster_info if info['status'].lower() == 'ready')
+    print(f"Ready Ray clusters: {ready_clusters}")
+    
+    # Show cluster queue capacity if available
+    print()
+    print("Cluster Queue Capacity:")
+    cmd = ['kubectl', 'describe', 'clusterqueue', 'cluster-queue']
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        lines = result.stdout.split('\n')
+        for i, line in enumerate(lines):
+            if 'Nominal Quota' in line:
+                # Get the label from the line above and extract second field
+                resource_name = ""
+                if i > 0:
+                    label_line = lines[i-1].strip()
+                    if label_line:
+                        fields = label_line.split()
+                        if len(fields) >= 2:
+                            resource_name = fields[1]
+                # Remove "Nominal Quota:" from the line
+                quota_line = line.strip().replace("Nominal Quota:", "").strip()
+                
+                # Format memory if it's a memory resource
+                if resource_name == "memory":
+                    # Extract the numeric value and convert to bytes for formatting
+                    quota_value = quota_line.split()[0] if quota_line.split() else "0"
+                    if quota_value.endswith('Ki'):
+                        bytes_value = int(quota_value[:-2]) * 1024
+                        formatted_quota = format_memory(bytes_value)
+                        print(f"  {resource_name}: {formatted_quota}")
+                    else:
+                        print(f"  {resource_name}: {quota_line}")
+                else:
+                    print(f"  {resource_name}: {quota_line}")
+            elif 'nominalQuota' in line:
+                print(f"  {line.strip()}")
+    except subprocess.CalledProcessError:
+        print("  Could not retrieve cluster queue information")
+
+
+if __name__ == '__main__':
+    main()
