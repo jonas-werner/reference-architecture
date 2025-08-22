@@ -7,6 +7,7 @@ SHARD=$(printf "shard_%02d" ${SLURM_PROCID})
     copy caios:<BUCKET_NAME> <DESTINATION_PATH> \
     --files-from=<WORK_DIR>/shards/${SHARD} \
     --ignore-existing \
+    --size-only \
     --fast-list \
     --transfers=128 \
     --checkers=256 \
