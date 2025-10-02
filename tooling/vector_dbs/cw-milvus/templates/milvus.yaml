@@ -1,0 +1,90 @@
+# # change the <parameters> to match your environment
+apiVersion: milvus.io/v1beta1
+kind: Milvus
+metadata:
+  name: {{ include "cw-milvus.name" . }}
+  labels:
+    app: {{ include "cw-milvus.name" . }}
+spec:
+  mode: cluster
+  components:
+    affinity:
+      nodeAffinity:
+        # prefer running on CPU nodes, if available
+        # see also queryNode and dataNode affinities for GPU-based indexing
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node.coreweave.cloud/class
+                operator: In
+                values:
+                - cpu
+    {{- if .Values.gpuIndexing }}
+    {{- include "cw-milvus.gpuIndexingAffinities" . | nindent 4 }}
+    {{- end }}
+  config:
+    minio:
+      # Use "aliyun" as cloud provider, as that enables virtual host style bucket requests
+      cloudProvider: aliyun
+      useVirtualHost: true
+      bucketName: {{ .Values.caiosBucketName }}
+      # Optional, config the prefix of the bucket milvus will use
+      rootPath: {{ include "cw-milvus.caiosBucketRootPath" . }}
+      useSSL: true
+    kafka:
+      # securityProtocol supports: PLAINTEXT, SSL, SASL_PLAINTEXT, SASL_SSL 
+      securityProtocol: PLAINTEXT
+      # saslMechanisms supports: PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
+      saslMechanisms: PLAIN
+      saslUsername: ""
+      saslPassword: ""
+  dependencies:
+    storage:
+      # enable external object storage
+      external: true
+      type: S3 # MinIO | S3
+      # the endpoint of AWS S3
+      endpoint: cwobject.com:443
+      # the secret storing the access key and secret key
+      secretRef: '{{ include "cw-milvus.name" . }}-caios-secret'
+    msgStreamType: kafka
+    kafka:
+      inCluster:
+        {{- if .Values.deleteDependencies }}
+        {{- include "cw-milvus.deleteDependencies" . | nindent 8 }}
+        {{- end }}
+        values:
+          image:
+            repository: bitnami/kafka
+            tag: 3.7.0-debian-12-r6
+          affinity:
+            nodeAffinity:
+              # prefer running on CPU nodes, if available
+              # see also queryNode and dataNode affinities for GPU-based indexing
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                    - key: node.coreweave.cloud/class
+                      operator: In
+                      values:
+                      - cpu
+    etcd:
+      inCluster:
+        {{- if .Values.deleteDependencies }}
+        {{- include "cw-milvus.deleteDependencies" . | nindent 8 }}
+        {{- end }}
+        values:
+          affinity:
+            nodeAffinity:
+              # prefer running on CPU nodes, if available
+              # see also queryNode and dataNode affinities for GPU-based indexing
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                    - key: node.coreweave.cloud/class
+                      operator: In
+                      values:
+                      - cpu

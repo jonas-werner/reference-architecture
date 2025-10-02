@@ -1,0 +1,13 @@
+# Default values for cw-milvus.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+caiosBucketName: <your_bucket_name>
+caiosAccessKey: <your_access_key>
+caiosSecretKey: <your_secret_key>
+caiosBucketRootPath:
+# set to true if you would like to use indexing with GPU
+# https://milvus.io/docs/index-with-gpu.md
+# this ensures relevant components are scheduled on GPU nodes
+gpuIndexing:
+deleteDependencies: true
