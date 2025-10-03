@@ -11,7 +11,7 @@ kind: CronJob
 metadata:
   name: milvus-backup
 spec:
-  schedule: "30 7 * * *"
+  schedule: {{ .Values.backupCronExpression }}
   jobTemplate:
     spec:
       template:
@@ -52,12 +52,12 @@ spec:
                 valueFrom:
                   secretKeyRef:
                     name: '{{ include "cw-milvus.name" . }}-caios-secret'
-                    key: accesskey
+                    key: backupAccesskey
               - name: MINIO_BACKUP_SECRET_KEY
                 valueFrom:
                   secretKeyRef:
                     name: '{{ include "cw-milvus.name" . }}-caios-secret'
-                    key: secretkey
+                    key: backupSecretkey
           volumes:
             - name: script-volume
               configMap:
