@@ -5,9 +5,17 @@
 caiosBucketName: <your_bucket_name>
 caiosAccessKey: <your_access_key>
 caiosSecretKey: <your_secret_key>
+# defaults to sanitized chart name
 caiosBucketRootPath:
+backupCaiosBucketName: <your_backup_bucket_name>
+backupCaiosAccessKey: <your_backup_bucket_access_key>
+backupCaiosSecretKey: <your_backup_bucket_secret_key>
+# defaults to "backup"
+backupCaiosBucketRootPath:
+backupCronExpression: "30 7 * * *"
 # set to true if you would like to use indexing with GPU
 # https://milvus.io/docs/index-with-gpu.md
 # this ensures relevant components are scheduled on GPU nodes
 gpuIndexing:
+# controls whether pods and pvcs for etcd and kafka are removed on uninstall
 deleteDependencies: true
