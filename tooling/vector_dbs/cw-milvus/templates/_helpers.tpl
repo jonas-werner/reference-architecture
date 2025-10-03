@@ -97,6 +97,13 @@ Default bucket prefix, if not specified
 {{- end }}
 
 {{/*
+Default bucket prefix for backup, if not specified
+*/}}
+{{- define "cw-milvus.backupBucketRootPath" -}}
+{{- default "backup" .Values.backupBucketRootPath }}
+{{- end }}
+
+{{/*
 Resource deletion policies
 */}}
 {{- define "cw-milvus.deleteDependencies" -}}
@@ -104,3 +111,9 @@ deletionPolicy: Delete
 pvcDeletion: true
 {{- end }}
 
+{{/*
+Milvus address
+*/}}
+{{- define "cw-milvus.address" -}}
+{{- include "cw-milvus.name" . }}-milvus.{{.Release.Namespace}}.svc.cluster.local
+{{- end }}

@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cw-milvus.name" . }}-script
+data:
+  backup.sh: |
+    {{ .Files.Get "scripts/backup.sh" | nindent 4 }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: milvus-backup
+spec:
+  schedule: "30 7 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          initContainers:
+          - name: prepare-files
+            image: busybox:latest
+            command: ["sh", "-c", "mkdir -p /milvus-backup/script && cp /scripts/backup.sh /milvus-backup/script/ && chmod +x /milvus-backup/script/backup.sh && cp -r /etc/milvus-backup/configs /milvus-backup/"]
+            volumeMounts:
+            - name: shared-data
+              mountPath: /milvus-backup
+            - name: script-volume
+              mountPath: /scripts/backup.sh
+              subPath: backup.sh
+            - name: config-volume
+              mountPath: /etc/milvus-backup/configs/backup.yaml
+              subPath: backup.yaml
+          containers:
+          - name: backup-runner
+            image: alpine:latest
+            imagePullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c", "/milvus-backup/script/backup.sh"]
+            volumeMounts:
+              - name: shared-data
+                mountPath: /milvus-backup
+            env:
+              - name: MINIO_ACCESS_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    key: accesskey
+              - name: MINIO_SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    key: secretkey
+              - name: MINIO_BACKUP_ACCESS_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    key: accesskey
+              - name: MINIO_BACKUP_SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    key: secretkey
+          volumes:
+            - name: script-volume
+              configMap:
+                name: {{ include "cw-milvus.name" . }}-script
+            - name: config-volume
+              configMap:
+                name: {{ include "cw-milvus.name" . }}-backup-config
+            - name: shared-data
+              emptyDir: {}
+          restartPolicy: OnFailure
