@@ -104,6 +104,27 @@ Default bucket prefix for backup, if not specified
 {{- end }}
 
 {{/*
+Default backup bucket, if not specified
+*/}}
+{{- define "cw-milvus.backupBucketName" -}}
+{{- default .Values.caiosBucketName .Values.backupCaiosBucketName }}
+{{- end }}
+
+{{/*
+Backup bucket access key, if not specified
+*/}}
+{{- define "cw-milvus.backupBucketAccessKey" -}}
+{{- default .Values.caiosAccessKey .Values.backupCaiosAccessKey }}
+{{- end }}
+
+{{/*
+Backup bucket secret key, if not specified
+*/}}
+{{- define "cw-milvus.backupBucketSecretKey" -}}
+{{- default .Values.caiosSecretKey .Values.backupCaiosSecretKey }}
+{{- end }}
+
+{{/*
 Resource deletion policies
 */}}
 {{- define "cw-milvus.deleteDependencies" -}}

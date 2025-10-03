@@ -64,7 +64,7 @@ data:
       backupToken: ""       # token of MinIO/S3
       backupGcpCredentialJSON: "/path/to/json-key-file" # The JSON content contains the gcs service account credentials.
       # Used only for the "gcpnative" cloud provider.
-      backupBucketName: {{ .Values.backupCaiosBucketName }} # Bucket name to store backup data. Backup data will store to backupBucketName/backupRootPath
+      backupBucketName: {{ include "cw-milvus.backupBucketName" . }} # Bucket name to store backup data. Backup data will store to backupBucketName/backupRootPath
       backupRootPath: {{ include "cw-milvus.backupBucketRootPath" . }} # Rootpath to store backup data. Backup data will store to backupBucketName/backupRootPath
       backupUseSSL: true # Access to MinIO/S3 with SSL
 
