@@ -12,31 +12,21 @@ metadata:
   name: milvus-backup
 spec:
   schedule: {{ .Values.backupCronExpression }}
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 1
   jobTemplate:
     spec:
       template:
         spec:
-          initContainers:
-          - name: prepare-files
-            image: busybox:latest
-            command: ["sh", "-c", "mkdir -p /milvus-backup/script && cp /scripts/backup.sh /milvus-backup/script/ && chmod +x /milvus-backup/script/backup.sh && cp -r /etc/milvus-backup/configs /milvus-backup/"]
-            volumeMounts:
-            - name: shared-data
-              mountPath: /milvus-backup
-            - name: script-volume
-              mountPath: /scripts/backup.sh
-              subPath: backup.sh
-            - name: config-volume
-              mountPath: /etc/milvus-backup/configs/backup.yaml
-              subPath: backup.yaml
           containers:
           - name: backup-runner
-            image: alpine:latest
+            image: milvusdb/milvus-backup:latest
             imagePullPolicy: IfNotPresent
-            command: ["/bin/sh", "-c", "/milvus-backup/script/backup.sh"]
+            command: ["/bin/sh", "-c", "BKP_TIMESTAMP=$(date \"+%Y%m%d%H%M%S\") && /app/milvus-backup create -n \"bkp${BKP_TIMESTAMP}\""]
             volumeMounts:
-              - name: shared-data
-                mountPath: /milvus-backup
+              - name: config-volume
+                mountPath: /app/configs/backup.yaml
+                subPath: backup.yaml
             env:
               - name: MINIO_ACCESS_KEY
                 valueFrom:
@@ -59,12 +49,7 @@ spec:
                     name: '{{ include "cw-milvus.name" . }}-caios-secret'
                     key: backupSecretkey
           volumes:
-            - name: script-volume
-              configMap:
-                name: {{ include "cw-milvus.name" . }}-script
             - name: config-volume
               configMap:
                 name: {{ include "cw-milvus.name" . }}-backup-config
-            - name: shared-data
-              emptyDir: {}
           restartPolicy: OnFailure
