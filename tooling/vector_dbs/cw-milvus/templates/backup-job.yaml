@@ -23,22 +23,22 @@ spec:
               - name: MINIO_ACCESS_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ include "cw-milvus.fullname" . }}-caios-secret'
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
                     key: accesskey
               - name: MINIO_SECRET_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ include "cw-milvus.fullname" . }}-caios-secret'
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
                     key: secretkey
               - name: MINIO_BACKUP_ACCESS_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ include "cw-milvus.fullname" . }}-caios-secret'
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
                     key: backupAccesskey
               - name: MINIO_BACKUP_SECRET_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ include "cw-milvus.fullname" . }}-caios-secret'
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
                     key: backupSecretkey
           volumes:
             - name: config-volume
