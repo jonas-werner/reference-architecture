@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "cw-milvus.name" . }}-backup-config
+  name: {{ include "cw-milvus.fullname" . }}-backup-config
 data:
   backup.yaml: |
     # Configures the system log output.

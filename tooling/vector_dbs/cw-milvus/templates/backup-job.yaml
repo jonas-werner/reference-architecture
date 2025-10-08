@@ -1,15 +1,7 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "cw-milvus.name" . }}-script
-data:
-  backup.sh: |
-    {{ .Files.Get "scripts/backup.sh" | nindent 4 }}
----
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: milvus-backup
+  name: {{ include "cw-milvus.fullname" . }}-backup
 spec:
   schedule: {{ .Values.backupCronExpression }}
   failedJobsHistoryLimit: 1
@@ -31,25 +23,25 @@ spec:
               - name: MINIO_ACCESS_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    name: '{{ include "cw-milvus.fullname" . }}-caios-secret'
                     key: accesskey
               - name: MINIO_SECRET_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    name: '{{ include "cw-milvus.fullname" . }}-caios-secret'
                     key: secretkey
               - name: MINIO_BACKUP_ACCESS_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    name: '{{ include "cw-milvus.fullname" . }}-caios-secret'
                     key: backupAccesskey
               - name: MINIO_BACKUP_SECRET_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    name: '{{ include "cw-milvus.fullname" . }}-caios-secret'
                     key: backupSecretkey
           volumes:
             - name: config-volume
               configMap:
-                name: {{ include "cw-milvus.name" . }}-backup-config
+                name: {{ include "cw-milvus.fullname" . }}-backup-config
           restartPolicy: OnFailure

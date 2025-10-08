@@ -4,7 +4,7 @@ kind: Milvus
 metadata:
   name: {{ include "cw-milvus.name" . }}
   labels:
-    app: {{ include "cw-milvus.name" . }}
+    app.kubernetes.io/name: {{ include "cw-milvus.name" . }}
 spec:
   mode: cluster
   components:
@@ -70,6 +70,19 @@ spec:
                       operator: In
                       values:
                       - cpu
+            podAntiAffinity:
+              # prefer spreading pods across nodes
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/component: kafka
+                      app.kubernetes.io/instance: '{{ include "cw-milvus.name" . }}-kafka'
+                      app.kubernetes.io/name: kafka
+                  namespaces:
+                  - {{ .Release.Namespace }}
+                  topologyKey: kubernetes.io/hostname
     etcd:
       inCluster:
         {{- if .Values.deleteDependencies }}
@@ -88,3 +101,15 @@ spec:
                       operator: In
                       values:
                       - cpu
+            podAntiAffinity:
+              # prefer spreading pods across nodes
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/instance: '{{ include "cw-milvus.name" . }}-etcd'
+                      app.kubernetes.io/name: etcd
+                  namespaces:
+                  - {{ .Release.Namespace }}
+                  topologyKey: kubernetes.io/hostname
