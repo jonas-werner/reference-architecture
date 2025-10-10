@@ -47,7 +47,7 @@ spec:
       # the endpoint of AWS S3
       endpoint: cwobject.com:443
       # the secret storing the access key and secret key
-      secretRef: '{{ include "cw-milvus.name" . }}-caios-secret'
+      secretRef: {{ include "cw-milvus.caiosSecretRef" . }}
     msgStreamType: kafka
     kafka:
       inCluster:

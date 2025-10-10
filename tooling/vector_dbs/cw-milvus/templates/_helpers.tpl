@@ -139,6 +139,20 @@ Milvus address
 {{- include "cw-milvus.name" . }}-milvus.{{.Release.Namespace}}.svc.cluster.local
 {{- end }}
 
+{{/*
+CAIOS secret name
+*/}}
+{{- define "cw-milvus.caiosSecretName" -}}
+'{{ include "cw-milvus.name" . }}-caios-secret'
+{{- end }}
+
+{{/*
+CAIOS secret ref
+*/}}
+{{- define "cw-milvus.caiosSecretRef" -}}
+{{- default ( include "cw-milvus.caiosSecretName" . ) .Values.existingCaiosSecretName }}
+{{- end }}
+
 {{- define "retemplate" -}}
   {{- $value := index . 0 }}
   {{- $context := index . 1 }}
