@@ -138,3 +138,13 @@ Milvus address
 {{- define "cw-milvus.address" -}}
 {{- include "cw-milvus.name" . }}-milvus.{{.Release.Namespace}}.svc.cluster.local
 {{- end }}
+
+{{- define "retemplate" -}}
+  {{- $value := index . 0 }}
+  {{- $context := index . 1 }}
+  {{- if typeIs "string" $value }}
+      {{- tpl $value $context }}
+  {{- else }}
+      {{- tpl ($value | toYaml) $context }}
+  {{- end }}
+{{- end}}
