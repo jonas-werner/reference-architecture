@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "cw-milvus.fullname" . }}-backup
+spec:
+  schedule: {{ .Values.backupCronExpression }}
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup-runner
+            image: milvusdb/milvus-backup:latest
+            imagePullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c", "BKP_TIMESTAMP=$(date \"+%Y%m%d%H%M%S\") && /app/milvus-backup create -n \"bkp${BKP_TIMESTAMP}\""]
+            volumeMounts:
+              - name: config-volume
+                mountPath: /app/configs/backup.yaml
+                subPath: backup.yaml
+            env:
+              - name: MINIO_ACCESS_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    key: accesskey
+              - name: MINIO_SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    key: secretkey
+              - name: MINIO_BACKUP_ACCESS_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    key: backupAccesskey
+              - name: MINIO_BACKUP_SECRET_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ include "cw-milvus.name" . }}-caios-secret'
+                    key: backupSecretkey
+          volumes:
+            - name: config-volume
+              configMap:
+                name: {{ include "cw-milvus.fullname" . }}-backup-config
+          restartPolicy: OnFailure

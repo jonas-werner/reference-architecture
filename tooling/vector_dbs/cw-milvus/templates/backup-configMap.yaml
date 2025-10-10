@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cw-milvus.fullname" . }}-backup-config
+data:
+  backup.yaml: | 
+{{- include "retemplate" (list .Values.config.milvusBackup .) | nindent 4 }}
