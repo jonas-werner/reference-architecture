@@ -1,0 +1,33 @@
+# SkyPilot Configuration Examples
+
+This directory contains example SkyPilot configuration files demonstrating different use cases for running workloads on CoreWeave infrastructure.
+
+## Configuration Examples
+
+### 1. mydevpod.yaml
+
+A development environment configuration that sets up a containerized workspace for interactive development and testing.
+
+**Use Case:** Interactive development, experimentation, and testing with GPU acceleration.
+
+### 2. vllm.yaml
+
+A production-ready configuration for deploying vLLM inference servers with OpenAI-compatible API endpoints.
+
+**Use Case:** Production inference serving with OpenAI-compatible API for language models.
+
+### 3. distributed_training.yaml
+
+A multi-node distributed training configuration using PyTorch's Distributed Data Parallel (DDP) framework.
+
+**Use Case:** Large-scale distributed training across multiple nodes for computationally intensive models.
+
+## Getting Started
+
+To use any of these configurations:
+
+1. Ensure you have SkyPilot installed and configured for CoreWeave
+2. Modify the configuration parameters as needed for your specific requirements
+3. Launch the configuration using: `sky launch <config-file.yaml>`
+
+For more information on SkyPilot and CoreWeave integration, refer to the main documentation.
