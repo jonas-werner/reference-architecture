@@ -1,0 +1,30 @@
+
+resources:
+  ports: 8000
+  # Define the resources needed for the vLLM server, here we use 1 H100 GPU
+  accelerators: H100_NVLINK_80GB:1
+  # Ensure sufficient memory for OPT-125M model and vLLM overhead
+  memory: 16+
+  # Use latest vLLM Docker image
+  image_id: docker:vllm/vllm-openai:latest
+  # Expose port for OpenAI-compatible API
+
+service:
+  readiness_probe: /health
+  replicas: 2
+
+
+# Typical use: pip install -r requirements.txt
+# Invoked under the workdir (i.e., can use its files).
+setup: |
+  echo "Setting up vLLM environment..."
+  # Container already has vLLM installed
+
+# Typical use: make use of resources, such as running training.
+# Invoked under the workdir (i.e., can use its files).
+run: |
+  echo "Starting vLLM OpenAI-compatible server..."
+  python3 -m vllm.entrypoints.openai.api_server \
+    --model facebook/opt-125m \
+    --host 0.0.0.0 \
+    --port 8000

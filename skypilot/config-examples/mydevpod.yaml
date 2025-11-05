@@ -1,0 +1,41 @@
+name: mydevpod
+
+resources:
+  # Modify this below to request different resources
+  accelerators: H100_NVLINK_80GB:1  # Use 1 H100
+  image_id: docker:ghcr.io/coreweave/ml-containers/nightly-torch-extras:8b6c417-base-25110205-cuda12.9.1-ubuntu22.04-torch2.10.0a0-vision0.25.0a0-audio2.10.0a0
+  memory: 32+  # Request at least 32GB of RAM
+
+file_mounts:
+  /my_data: # Mount storage bucket to /my_data in the container
+    source: cw://skypilot # Change this to be your bucket name
+    mode: MOUNT  # MOUNT or COPY or MOUNT_CACHED. Defaults to MOUNT. Optional.
+# Sync data in my-code/ on local machine to ~/sky_workdir in the container
+workdir: ./my-code
+
+#Environment variables to set in the container
+# These are needed to access CoreWeave Object Storage using the AWS CLI
+envs:
+  AWS_SHARED_CREDENTIALS_FILE: "~/.coreweave/cw.credentials"
+  AWS_CONFIG_FILE: "~/.coreweave/cw.config"
+  AWS_PROFILE: "cw"
+
+# Any setup commands to run in the container before 'run'
+# Here we install the AWS CLI to access storage
+setup: |
+  echo "Setting up test storage environment..."
+  # Install AWS CLI
+  apt install python3.10-venv -y
+  curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+  unzip awscli-bundle.zip
+  sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+  echo export AWS_CONFIG_FILE=$AWS_CONFIG_FILE >> ~/.bashrc
+  echo export AWS_SHARED_CREDENTIALS_FILE=$AWS_SHARED_CREDENTIALS_FILE >> ~/.bashrc
+  echo export AWS_PROFILE=$AWS_PROFILE >> ~/.bashrc
+
+run: |
+  echo "Starting container..."
+  echo "Node info:"
+  nvidia-smi
+  echo "Available GPUs: $(nvidia-smi --list-gpus | wc -l)"
+  echo "Container ready for testing..."
