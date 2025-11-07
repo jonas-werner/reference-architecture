@@ -101,6 +101,7 @@ modelCache:
   enabled: true
   create: false
   name: huggingface-model-cache
+  mountPath: /root/.cache/huggingface
 ```
 
 ### 6. Verify Dependencies
@@ -135,7 +136,7 @@ Please note that if you updated any of the default values for the observability 
 For example, to run `meta-llama/Llama-3.1-8B-Instruct` you can use `hack/values-llama-small.yaml`:
 
 ```bash
-helm install basic-inference ./ --namespace inference --create-namespace -f hack/values-llama-small.yaml
+helm install basic-inference ./ --namespace inference --create-namespace -f hack/values-llama-small.yaml --values=values.yaml
 ```
 
 By default, the chart will create an ingress for the vLLM service which uses the release name as subdomain.
